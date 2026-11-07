@@ -2,12 +2,8 @@
 
 App Android para la gestión de alarmas comunitarias de la Junta de Vecinos Población Zaror (Cerrillos). Evaluación Parcial 2, DSY1105 Desarrollo de Aplicaciones Móviles, DUOC UC.
 
-## Integrantes
-- Diego Alejandro González
-- Stefani Francisca Verdugo Toledo
+## Integrante
 - Camilo Andrés Contreras Silva
-- Emanuel Orellana Gaete
-- Renato Alexander Vargas González
 
 ## Requerimientos del MVP (adaptados al caso)
 1. Registrar alertas comunitarias (perfil Vecino/a) con formulario validado.
