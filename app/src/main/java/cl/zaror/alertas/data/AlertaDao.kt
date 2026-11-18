@@ -2,6 +2,7 @@ package cl.zaror.alertas.data
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
@@ -16,6 +17,17 @@ interface AlertaDao {
 
     @Insert
     suspend fun insertar(alerta: AlertaEntity)
+
+    /** Guarda la alerta que devolvió el servidor; si ya existía, la reemplaza. */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarOReemplazar(alerta: AlertaEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarOReemplazarTodas(alertas: List<AlertaEntity>)
+
+    /** Borra del caché lo que el servidor ya no devuelve. */
+    @Query("DELETE FROM alertas WHERE id NOT IN (:idsVigentes)")
+    suspend fun eliminarFueraDe(idsVigentes: List<Int>)
 
     @Query(
         "UPDATE alertas SET estado = :nuevoEstado WHERE id = :id"
