@@ -12,10 +12,12 @@ public record AlertaResponse(
         String estado,
         Instant fechaHora,
         Long atendidaPor,
-        Instant fechaAtencion) {
+        Instant fechaAtencion,
+        String reportadaPor) {
 
     static AlertaResponse desde(Alerta a) {
         return new AlertaResponse(a.id(), a.usuarioId(), a.tipo(), a.descripcion(), a.ubicacion(),
-                a.fotoUri(), a.estado(), a.fechaHora(), a.atendidaPor(), a.fechaAtencion());
+                a.fotoUri(), a.estado(), a.fechaHora(), a.atendidaPor(), a.fechaAtencion(),
+                a.reportadaPor());
     }
 }
