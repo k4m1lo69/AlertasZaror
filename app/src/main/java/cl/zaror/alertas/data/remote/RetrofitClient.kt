@@ -21,4 +21,13 @@ object RetrofitClient {
     val alertasApi: AlertasApi by lazy {
         retrofit.create(AlertasApi::class.java)
     }
+
+    /** API externa de OpenStreetMap: otra URL base y otra instancia de Retrofit. */
+    val geocodingApi: GeocodingApi by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://nominatim.openstreetmap.org/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(GeocodingApi::class.java)
+    }
 }

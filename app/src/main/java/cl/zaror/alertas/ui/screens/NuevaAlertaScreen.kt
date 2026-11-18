@@ -1,6 +1,8 @@
 package cl.zaror.alertas.ui.screens
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.widget.Toast
@@ -16,13 +18,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import cl.zaror.alertas.domain.Validaciones
 import cl.zaror.alertas.ui.components.CampoTexto
 import cl.zaror.alertas.ui.components.SelectorChips
+import cl.zaror.alertas.viewmodel.EstadoUbicacion
 
 @Composable
 fun NuevaAlertaScreen(
     nombreUsuario: String,
+    estadoUbicacion: EstadoUbicacion = EstadoUbicacion.Inactivo,
+    onBuscarUbicacion: () -> Unit = {},
+    onUbicacionAplicada: () -> Unit = {},
     onRegistrar: (String, String, String, String?) -> Unit
 ) {
     val context = LocalContext.current
@@ -35,6 +42,36 @@ fun NuevaAlertaScreen(
     var errorTipo by remember { mutableStateOf<String?>(null) }
     var errorDescripcion by remember { mutableStateOf<String?>(null) }
     var errorUbicacion by remember { mutableStateOf<String?>(null) }
+
+    val permisoUbicacion = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { resultado ->
+        if (resultado.values.any { it }) {
+            onBuscarUbicacion()
+        } else {
+            Toast.makeText(
+                context,
+                "Sin permiso de ubicación no se puede detectar tu dirección",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    // Aplica el resultado del GPS al campo Ubicación (o muestra el error) y avisa que ya se usó.
+    LaunchedEffect(estadoUbicacion) {
+        when (estadoUbicacion) {
+            is EstadoUbicacion.Lista -> {
+                ubicacion = estadoUbicacion.direccion
+                errorUbicacion = null
+                onUbicacionAplicada()
+            }
+            is EstadoUbicacion.Error -> {
+                Toast.makeText(context, estadoUbicacion.mensaje, Toast.LENGTH_LONG).show()
+                onUbicacionAplicada()
+            }
+            else -> Unit
+        }
+    }
 
     val selectorFoto = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -75,6 +112,39 @@ fun NuevaAlertaScreen(
             icono = Icons.Default.Place,
             error = errorUbicacion
         )
+
+        OutlinedButton(
+            enabled = estadoUbicacion !is EstadoUbicacion.Buscando,
+            onClick = {
+                val concedido = listOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ).any {
+                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                }
+                if (concedido) {
+                    onBuscarUbicacion()
+                } else {
+                    permisoUbicacion.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.MyLocation, null)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                if (estadoUbicacion is EstadoUbicacion.Buscando) {
+                    "Buscando tu ubicación…"
+                } else {
+                    "Usar mi ubicación (GPS)"
+                }
+            )
+        }
 
         OutlinedButton(
             onClick = {

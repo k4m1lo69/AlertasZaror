@@ -56,6 +56,14 @@ class MainActivity : ComponentActivity() {
             contactosFactory
         )[ContactosViewModel::class.java]
 
+        val ubicacionViewModel = ViewModelProvider(
+            this,
+            UbicacionViewModelFactory(
+                GeocodingRepository(cl.zaror.alertas.data.remote.RetrofitClient.geocodingApi),
+                UbicacionGps(this)
+            )
+        )[UbicacionViewModel::class.java]
+
         val usuarioDao = db.usuarioDao()
         val sesionManager = SesionManager(this)
 
@@ -73,7 +81,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AlertasZaror10Theme {
-                AccesoApp(authViewModel, viewModel, contactosViewModel)
+                AccesoApp(authViewModel, viewModel, contactosViewModel, ubicacionViewModel)
             }
         }
     }
@@ -84,7 +92,8 @@ class MainActivity : ComponentActivity() {
 fun AccesoApp(
     authViewModel: AuthViewModel,
     viewModel: AlertasViewModel,
-    contactosViewModel: ContactosViewModel
+    contactosViewModel: ContactosViewModel,
+    ubicacionViewModel: UbicacionViewModel
 ) {
     val estado by authViewModel.estadoSesion.collectAsState()
     val error by authViewModel.error.collectAsState()
@@ -126,6 +135,7 @@ fun AccesoApp(
         is EstadoSesion.Activa -> AlertasApp(
             viewModel = viewModel,
             contactosViewModel = contactosViewModel,
+            ubicacionViewModel = ubicacionViewModel,
             usuario = sesion.usuario,
             onCerrarSesion = authViewModel::cerrarSesion
         )
@@ -136,6 +146,7 @@ fun AccesoApp(
 fun AlertasApp(
     viewModel: AlertasViewModel,
     contactosViewModel: ContactosViewModel,
+    ubicacionViewModel: UbicacionViewModel,
     usuario: UsuarioSesion,
     onCerrarSesion: () -> Unit
 ) {
@@ -146,6 +157,7 @@ fun AlertasApp(
     val contactos by contactosFlow.collectAsState(initial = emptyList())
     val errorContacto by contactosViewModel.error.collectAsState()
     val errorAlertas by viewModel.error.collectAsState()
+    val estadoUbicacion by ubicacionViewModel.estado.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val esAdmin = usuario.rol == Rol.ADMINISTRADOR
     val activas = alertas.count { it.estado == "Activa" }
@@ -207,7 +219,10 @@ fun AlertasApp(
                     onCerrarSesion = onCerrarSesion
                 )
                 "Nueva" -> NuevaAlertaScreen(
-                    nombreUsuario = usuario.nombre
+                    nombreUsuario = usuario.nombre,
+                    estadoUbicacion = estadoUbicacion,
+                    onBuscarUbicacion = ubicacionViewModel::buscar,
+                    onUbicacionAplicada = ubicacionViewModel::consumir
                 ) { tipo, descripcion, ubicacion, fotoUri ->
                     viewModel.registrarAlerta(
                         usuario = usuario,
