@@ -40,7 +40,11 @@ class MainActivity : ComponentActivity() {
 
         val db = AppDatabase.obtener(this)
 
-        val repository = AlertasRepository(db.alertaDao())
+        val repository = AlertasRepository(
+            db.alertaDao(),
+            cl.zaror.alertas.data.remote.RetrofitClient.alertasApi,
+            TokenManager(this)
+        )
         val factory = AlertasViewModelFactory(repository)
         val viewModel = ViewModelProvider(this, factory)[AlertasViewModel::class.java]
 
@@ -141,8 +145,24 @@ fun AlertasApp(
     val contactosFlow = remember(usuario) { contactosViewModel.contactos(usuario) }
     val contactos by contactosFlow.collectAsState(initial = emptyList())
     val errorContacto by contactosViewModel.error.collectAsState()
+    val errorAlertas by viewModel.error.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
     val esAdmin = usuario.rol == Rol.ADMINISTRADOR
     val activas = alertas.count { it.estado == "Activa" }
+
+    // Trae las alertas del servidor al abrir la app y al volver a Inicio o Alertas.
+    LaunchedEffect(usuario, pantalla) {
+        if (pantalla == "Inicio" || pantalla == "Alertas") {
+            viewModel.refrescar(usuario)
+        }
+    }
+
+    LaunchedEffect(errorAlertas) {
+        errorAlertas?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.limpiarError()
+        }
+    }
 
     val pestanas = listOf(
         Triple("Inicio", "Inicio", Icons.Default.Home),
@@ -153,6 +173,7 @@ fun AlertasApp(
     )
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             NavigationBar {
                 pestanas.forEach { (ruta, etiqueta, icono) ->
