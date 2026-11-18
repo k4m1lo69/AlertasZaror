@@ -3,7 +3,7 @@ package cl.zaror.alertas.backend.alertas;
 import java.time.Instant;
 import java.util.Set;
 
-/** Fila de la tabla ALERTAS. */
+/** Fila de la tabla ALERTAS. reportadaPor es el nombre del vecino (viene de USUARIOS). */
 public record Alerta(
         long id,
         long usuarioId,
@@ -14,7 +14,8 @@ public record Alerta(
         String estado,
         Instant fechaHora,
         Long atendidaPor,
-        Instant fechaAtencion) {
+        Instant fechaAtencion,
+        String reportadaPor) {
 
     public static final String ESTADO_ACTIVA = "ACTIVA";
     public static final String ESTADO_ATENDIDA = "ATENDIDA";

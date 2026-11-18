@@ -16,8 +16,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class AlertaRepository {
 
-    private static final String COLUMNAS =
-            "ID, USUARIO_ID, TIPO, DESCRIPCION, UBICACION, FOTO_URI, ESTADO, FECHA_HORA, ATENDIDA_POR, FECHA_ATENCION";
+    private static final String CONSULTA_BASE =
+            "SELECT a.ID, a.USUARIO_ID, a.TIPO, a.DESCRIPCION, a.UBICACION, a.FOTO_URI, a.ESTADO, "
+                    + "a.FECHA_HORA, a.ATENDIDA_POR, a.FECHA_ATENCION, u.NOMBRE AS REPORTADA_POR "
+                    + "FROM ALERTAS a JOIN USUARIOS u ON u.ID = a.USUARIO_ID ";
 
     private static final RowMapper<Alerta> MAPEADOR = (rs, fila) -> {
         Timestamp atencion = rs.getTimestamp("FECHA_ATENCION");
@@ -33,7 +35,8 @@ public class AlertaRepository {
                 rs.getString("ESTADO"),
                 rs.getTimestamp("FECHA_HORA").toInstant(),
                 atendida,
-                atencion == null ? null : atencion.toInstant());
+                atencion == null ? null : atencion.toInstant(),
+                rs.getString("REPORTADA_POR"));
     };
 
     private final JdbcTemplate jdbc;
@@ -65,17 +68,17 @@ public class AlertaRepository {
 
     public Optional<Alerta> buscarPorId(long id) {
         List<Alerta> lista = jdbc.query(
-                "SELECT " + COLUMNAS + " FROM ALERTAS WHERE ID = ?", MAPEADOR, id);
+                CONSULTA_BASE + "WHERE a.ID = ?", MAPEADOR, id);
         return lista.stream().findFirst();
     }
 
     public List<Alerta> listarTodas() {
-        return jdbc.query("SELECT " + COLUMNAS + " FROM ALERTAS ORDER BY FECHA_HORA DESC", MAPEADOR);
+        return jdbc.query(CONSULTA_BASE + "ORDER BY a.FECHA_HORA DESC", MAPEADOR);
     }
 
     public List<Alerta> listarDeUsuario(long usuarioId) {
         return jdbc.query(
-                "SELECT " + COLUMNAS + " FROM ALERTAS WHERE USUARIO_ID = ? ORDER BY FECHA_HORA DESC",
+                CONSULTA_BASE + "WHERE a.USUARIO_ID = ? ORDER BY a.FECHA_HORA DESC",
                 MAPEADOR, usuarioId);
     }
 

@@ -37,7 +37,7 @@ class AlertaServiceTest {
 
     private Alerta alerta(long id, long usuarioId, String estado) {
         return new Alerta(id, usuarioId, "EMERGENCIA", "Descripción de prueba", "Pasaje Uno 123",
-                null, estado, AHORA, null, null);
+                null, estado, AHORA, null, null, "Vecino Prueba");
     }
 
     private AlertaRequest solicitudValida() {
