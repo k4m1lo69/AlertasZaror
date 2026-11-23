@@ -36,19 +36,19 @@ public class AlertaController {
 
     @GetMapping
     public List<AlertaResponse> listar(@AuthenticationPrincipal Jwt jwt, Authentication auth) {
-        return servicio.listar(idDe(jwt), esAdmin(auth));
+        return servicio.listar(idDe(jwt), veTodas(auth));
     }
 
     @GetMapping("/{id}")
     public AlertaResponse obtener(@AuthenticationPrincipal Jwt jwt, Authentication auth,
             @PathVariable long id) {
-        return servicio.obtener(id, idDe(jwt), esAdmin(auth));
+        return servicio.obtener(id, idDe(jwt), veTodas(auth));
     }
 
     @PatchMapping("/{id}/estado")
     public AlertaResponse cambiarEstado(@AuthenticationPrincipal Jwt jwt, Authentication auth,
             @PathVariable long id, @RequestBody EstadoRequest solicitud) {
-        return servicio.cambiarEstado(id, idDe(jwt), esAdmin(auth), solicitud.estado());
+        return servicio.cambiarEstado(id, idDe(jwt), puedeAtender(auth), solicitud.estado());
     }
 
     @DeleteMapping("/{id}")
@@ -64,5 +64,20 @@ public class AlertaController {
 
     private static boolean esAdmin(Authentication auth) {
         return auth.getAuthorities().stream().anyMatch(a -> AUTORIDAD_ADMIN.equals(a.getAuthority()));
+    }
+
+    private static boolean tieneAutoridad(Authentication auth, String... autoridades) {
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> java.util.Arrays.asList(autoridades).contains(a.getAuthority()));
+    }
+
+    /** Administrador, coordinador y directiva ven todas las alertas. */
+    private static boolean veTodas(Authentication auth) {
+        return tieneAutoridad(auth, AUTORIDAD_ADMIN, "ROLE_COORDINADOR", "ROLE_DIRECTIVA");
+    }
+
+    /** Solo administrador y coordinador pueden marcar una alerta como atendida. */
+    private static boolean puedeAtender(Authentication auth) {
+        return tieneAutoridad(auth, AUTORIDAD_ADMIN, "ROLE_COORDINADOR");
     }
 }

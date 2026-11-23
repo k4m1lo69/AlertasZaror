@@ -109,4 +109,51 @@ public class AuthService {
                 .map(UsuarioResponse::desde)
                 .orElseThrow(CredencialesInvalidasException::new);
     }
+
+    /** El propio usuario edita su nombre y dirección. */
+    public UsuarioResponse actualizarPerfil(long usuarioId, PerfilRequest solicitud) {
+        String errorNombre = ValidacionesAuth.validarNombre(solicitud.nombre());
+        String errorDireccion = ValidacionesAuth.validarDireccion(solicitud.direccion());
+        if (errorNombre != null || errorDireccion != null) {
+            Map<String, String> errores = new java.util.LinkedHashMap<>();
+            if (errorNombre != null) {
+                errores.put("nombre", errorNombre);
+            }
+            if (errorDireccion != null) {
+                errores.put("direccion", errorDireccion);
+            }
+            throw new ValidacionException(errores);
+        }
+        usuarios.buscarPorId(usuarioId).orElseThrow(CredencialesInvalidasException::new);
+        usuarios.actualizarPerfil(usuarioId, solicitud.nombre().trim(), solicitud.direccion().trim());
+        return UsuarioResponse.desde(usuarios.buscarPorId(usuarioId).orElseThrow(CredencialesInvalidasException::new));
+    }
+
+    /** Cambia la clave. Una clave actual incorrecta cuenta como intento fallido (misma política del login). */
+    public void cambiarClave(long usuarioId, CambiarClaveRequest solicitud) {
+        String errorNueva = ValidacionesAuth.validarClave(solicitud.claveNueva());
+        if (errorNueva != null) {
+            throw new ValidacionException(Map.of("claveNueva", errorNueva));
+        }
+        Usuario usuario = usuarios.buscarPorId(usuarioId).orElseThrow(CredencialesInvalidasException::new);
+        Instant ahora = reloj.instant();
+
+        if (PoliticaBloqueo.estaBloqueado(usuario.bloqueadoHasta(), ahora)) {
+            throw new CuentaBloqueadaException(
+                    PoliticaBloqueo.segundosRestantes(usuario.bloqueadoHasta(), ahora));
+        }
+
+        String actual = solicitud.claveActual() == null ? "" : solicitud.claveActual();
+        boolean demasiadoLarga = actual.getBytes(StandardCharsets.UTF_8).length > ValidacionesAuth.MAX_BYTES_CLAVE;
+        if (demasiadoLarga || !encoder.matches(actual, usuario.claveHash())) {
+            PoliticaBloqueo.Estado estado = PoliticaBloqueo.tras(usuario.intentosFallidos(), ahora);
+            usuarios.actualizarIntentos(usuario.id(), estado.intentosFallidos(), estado.bloqueadoHasta());
+            if (estado.bloqueadoHasta() != null) {
+                throw new CuentaBloqueadaException(
+                        PoliticaBloqueo.segundosRestantes(estado.bloqueadoHasta(), ahora));
+            }
+            throw new ValidacionException(Map.of("claveActual", "La contraseña actual no es correcta"));
+        }
+        usuarios.actualizarClave(usuario.id(), encoder.encode(solicitud.claveNueva()));
+    }
 }

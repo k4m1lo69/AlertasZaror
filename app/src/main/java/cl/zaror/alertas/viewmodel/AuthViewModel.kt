@@ -9,6 +9,8 @@ import cl.zaror.alertas.data.UsuarioEntity
 import cl.zaror.alertas.data.UsuariosRepository
 import cl.zaror.alertas.data.remote.AuthApi
 import cl.zaror.alertas.data.remote.LoginRequest
+import cl.zaror.alertas.data.remote.CambiarClaveRequest
+import cl.zaror.alertas.data.remote.PerfilRequest
 import cl.zaror.alertas.data.remote.RegistroRequest
 import cl.zaror.alertas.domain.Rol
 import com.google.gson.JsonParser
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -45,8 +48,11 @@ class AuthViewModel(
     private val tokenManager: TokenManager
 ) : ViewModel() {
 
+    /** Se incrementa para obligar a releer el usuario local (por ejemplo, tras editar el perfil). */
+    private val _refresco = MutableStateFlow(0)
+
     val estadoSesion: StateFlow<EstadoSesion> =
-        combine(sesion.usuarioId, tokenManager.rol) { id, rol ->
+        combine(sesion.usuarioId, tokenManager.rol, _refresco) { id, rol, _ ->
             id to rol
         }.map { (id, rolServidor) ->
 
@@ -55,13 +61,7 @@ class AuthViewModel(
             if (usuario == null) {
                 EstadoSesion.SinSesion
             } else {
-                val rol = if (rolServidor.equals("ADMIN", true) ||
-                    rolServidor.equals("ADMINISTRADOR", true)
-                ) {
-                    Rol.ADMINISTRADOR
-                } else {
-                    Rol.VECINO
-                }
+                val rol = Rol.desdeServidor(rolServidor)
 
                 EstadoSesion.Activa(
                     UsuarioSesion(
@@ -170,6 +170,56 @@ class AuthViewModel(
         }
     }
 
+    private val _mensaje = MutableStateFlow<Aviso?>(null)
+
+    /** Resultado de editar el perfil o cambiar la clave, listo para mostrarse. */
+    val mensaje: StateFlow<Aviso?> = _mensaje.asStateFlow()
+
+    fun limpiarMensaje() {
+        _mensaje.value = null
+    }
+
+    fun guardarPerfil(usuarioId: Int, nombre: String, direccion: String) {
+        viewModelScope.launch {
+            _procesando.value = true
+            _mensaje.value = null
+
+            try {
+                val token = tokenManager.token.first()
+                    ?: throw IllegalStateException("Tu sesión expiró. Inicia sesión de nuevo.")
+                val respuesta = api.actualizarPerfil(
+                    "Bearer $token",
+                    PerfilRequest(nombre.trim(), direccion.trim())
+                )
+                usuarioDao.actualizarPerfilLocal(usuarioId, respuesta.nombre, direccion.trim())
+                _refresco.value += 1
+                _mensaje.value = Aviso("Perfil actualizado.")
+            } catch (e: Exception) {
+                _mensaje.value = Aviso(mensajeError(e), esError = true)
+            } finally {
+                _procesando.value = false
+            }
+        }
+    }
+
+    fun cambiarClave(claveActual: String, claveNueva: String) {
+        viewModelScope.launch {
+            _procesando.value = true
+            _mensaje.value = null
+
+            try {
+                val token = tokenManager.token.first()
+                    ?: throw IllegalStateException("Tu sesión expiró. Inicia sesión de nuevo.")
+                api.cambiarClave("Bearer $token", CambiarClaveRequest(claveActual, claveNueva))
+                _mensaje.value = Aviso("Contraseña actualizada.")
+            } catch (e: Exception) {
+                _mensaje.value = Aviso(mensajeError(e), esError = true)
+            } finally {
+                _procesando.value = false
+            }
+        }
+    }
+
     fun cerrarSesion() {
         viewModelScope.launch {
             tokenManager.limpiar()
@@ -188,6 +238,13 @@ class AuthViewModel(
             if (!cuerpo.isNullOrBlank()) {
                 try {
                     val json = JsonParser.parseString(cuerpo).asJsonObject
+
+                    if (json.has("detalle") && json.get("detalle").isJsonObject) {
+                        val primero = json.getAsJsonObject("detalle").entrySet().firstOrNull()
+                        if (primero != null) {
+                            return primero.value.asString
+                        }
+                    }
 
                     if (json.has("error")) {
                         return json.get("error").asString

@@ -8,10 +8,15 @@ object Permisos {
     const val ESTADO_CANCELADA = "Cancelada"
 
     /** El administrador ve todas las alertas; el vecino solo las suyas. */
-    fun puedeVerTodas(rol: Rol): Boolean = rol == Rol.ADMINISTRADOR
+    fun puedeVerTodas(rol: Rol): Boolean =
+        rol == Rol.ADMINISTRADOR || rol == Rol.COORDINADOR || rol == Rol.DIRECTIVA
 
     /** Solo el administrador valida y marca una alerta como atendida. */
-    fun puedeMarcarAtendida(rol: Rol): Boolean = rol == Rol.ADMINISTRADOR
+    fun puedeMarcarAtendida(rol: Rol): Boolean =
+        rol == Rol.ADMINISTRADOR || rol == Rol.COORDINADOR
+
+    /** Solo el administrador aprueba vecinos, cambia roles y restablece contraseñas. */
+    fun puedeAdministrarUsuarios(rol: Rol): Boolean = rol == Rol.ADMINISTRADOR
 
     /** Solo el administrador elimina alertas (para no perder evidencia). */
     fun puedeEliminar(rol: Rol): Boolean = rol == Rol.ADMINISTRADOR

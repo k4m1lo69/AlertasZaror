@@ -15,3 +15,11 @@
 local.properties
 
 .idea/
+
+# --- Alertas Zaror: seguridad y respaldos ---
+.env
+*.backup_*
+*_RESPALDO_*
+backend/datos/
+local.properties
+keystore.properties

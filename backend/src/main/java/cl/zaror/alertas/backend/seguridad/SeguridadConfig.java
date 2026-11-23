@@ -72,7 +72,7 @@ public class SeguridadConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/error", "/api/salud", "/api/auth/registro", "/api/auth/login")
                         .permitAll()
-                        .requestMatchers("/api/salud/bd").hasRole("ADMINISTRADOR")
+                        .requestMatchers("/api/salud/bd", "/api/admin/**").hasRole("ADMINISTRADOR")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(convertidor())));
         return http.build();

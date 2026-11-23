@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -45,6 +46,7 @@ fun LoginScreen(
 
     var errorTelefono by remember { mutableStateOf<String?>(null) }
     var errorClave by remember { mutableStateOf<String?>(null) }
+    var mostrarAyudaClave by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -142,6 +144,29 @@ fun LoginScreen(
 
         TextButton(onClick = onIrARegistro) {
             Text("¿No tienes cuenta? Regístrate")
+        }
+
+        TextButton(onClick = { mostrarAyudaClave = true }) {
+            Text("¿Olvidaste tu contraseña?")
+        }
+
+        if (mostrarAyudaClave) {
+            AlertDialog(
+                onDismissRequest = { mostrarAyudaClave = false },
+                title = { Text("Recuperar contraseña") },
+                text = {
+                    Text(
+                        "Pide a un administrador de la junta de vecinos que restablezca tu contraseña. " +
+                            "Te entregará una clave temporal en persona. Inicia sesión con ella y " +
+                            "cámbiala desde «Mi cuenta»."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { mostrarAyudaClave = false }) {
+                        Text("Entendido")
+                    }
+                }
+            )
         }
     }
 }

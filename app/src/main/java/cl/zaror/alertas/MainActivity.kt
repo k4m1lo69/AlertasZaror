@@ -26,7 +26,9 @@ import cl.zaror.alertas.data.*
 import cl.zaror.alertas.domain.Permisos
 import cl.zaror.alertas.domain.Rol
 import cl.zaror.alertas.ui.components.AlertaCard
+import cl.zaror.alertas.ui.screens.AdminScreen
 import cl.zaror.alertas.ui.screens.ContactosScreen
+import cl.zaror.alertas.ui.screens.CuentaScreen
 import cl.zaror.alertas.ui.screens.LoginScreen
 import cl.zaror.alertas.ui.screens.NuevaAlertaScreen
 import cl.zaror.alertas.ui.screens.RegistroScreen
@@ -59,7 +61,12 @@ class MainActivity : ComponentActivity() {
         val ubicacionViewModel = ViewModelProvider(
             this,
             UbicacionViewModelFactory(
-                GeocodingRepository(cl.zaror.alertas.data.remote.RetrofitClient.geocodingApi),
+                GeocodingRepository(
+                    cl.zaror.alertas.data.remote.RetrofitClient.geocodingApi
+                ),
+                ClimaRepository(
+                    cl.zaror.alertas.data.remote.RetrofitClient.climaApi
+                ),
                 UbicacionGps(this)
             )
         )[UbicacionViewModel::class.java]
@@ -79,9 +86,17 @@ class MainActivity : ComponentActivity() {
             authFactory
         )[AuthViewModel::class.java]
 
+        val adminViewModel = ViewModelProvider(
+            this,
+            AdminViewModelFactory(
+                cl.zaror.alertas.data.remote.RetrofitClient.authApi,
+                TokenManager(this)
+            )
+        )[AdminViewModel::class.java]
+
         setContent {
             AlertasZaror10Theme {
-                AccesoApp(authViewModel, viewModel, contactosViewModel, ubicacionViewModel)
+                AccesoApp(authViewModel, viewModel, contactosViewModel, ubicacionViewModel, adminViewModel)
             }
         }
     }
@@ -93,7 +108,8 @@ fun AccesoApp(
     authViewModel: AuthViewModel,
     viewModel: AlertasViewModel,
     contactosViewModel: ContactosViewModel,
-    ubicacionViewModel: UbicacionViewModel
+    ubicacionViewModel: UbicacionViewModel,
+    adminViewModel: AdminViewModel
 ) {
     val estado by authViewModel.estadoSesion.collectAsState()
     val error by authViewModel.error.collectAsState()
@@ -136,6 +152,8 @@ fun AccesoApp(
             viewModel = viewModel,
             contactosViewModel = contactosViewModel,
             ubicacionViewModel = ubicacionViewModel,
+            authViewModel = authViewModel,
+            adminViewModel = adminViewModel,
             usuario = sesion.usuario,
             onCerrarSesion = authViewModel::cerrarSesion
         )
@@ -147,6 +165,8 @@ fun AlertasApp(
     viewModel: AlertasViewModel,
     contactosViewModel: ContactosViewModel,
     ubicacionViewModel: UbicacionViewModel,
+    authViewModel: AuthViewModel,
+    adminViewModel: AdminViewModel,
     usuario: UsuarioSesion,
     onCerrarSesion: () -> Unit
 ) {
@@ -158,8 +178,11 @@ fun AlertasApp(
     val errorContacto by contactosViewModel.error.collectAsState()
     val errorAlertas by viewModel.error.collectAsState()
     val estadoUbicacion by ubicacionViewModel.estado.collectAsState()
+    val estadoClima by ubicacionViewModel.estadoClima.collectAsState()
+    val mensajeCuenta by authViewModel.mensaje.collectAsState()
+    val procesandoCuenta by authViewModel.procesando.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val esAdmin = usuario.rol == Rol.ADMINISTRADOR
+    val esAdmin = Permisos.puedeVerTodas(usuario.rol)
     val activas = alertas.count { it.estado == "Activa" }
 
     // Trae las alertas del servidor al abrir la app y al volver a Inicio o Alertas.
@@ -199,7 +222,7 @@ fun AlertasApp(
             }
         },
         floatingActionButton = {
-            if (pantalla != "Nueva" && pantalla != "Falla" && pantalla != "Contactos") {
+            if (pantalla !in listOf("Nueva", "Falla", "Contactos", "Cuenta", "Admin")) {
                 BotonAlarma { pantalla = "Nueva" }
             }
         }
@@ -216,13 +239,22 @@ fun AlertasApp(
                     esAdmin = esAdmin,
                     activas = activas,
                     total = alertas.size,
+                    rolTexto = usuario.rol.etiqueta,
+                    onMiCuenta = { pantalla = "Cuenta" },
+                    onAdministrar = if (Permisos.puedeAdministrarUsuarios(usuario.rol)) {
+                        { pantalla = "Admin" }
+                    } else {
+                        null
+                    },
                     onCerrarSesion = onCerrarSesion
                 )
                 "Nueva" -> NuevaAlertaScreen(
                     nombreUsuario = usuario.nombre,
                     estadoUbicacion = estadoUbicacion,
+                    estadoClima = estadoClima,
                     onBuscarUbicacion = ubicacionViewModel::buscar,
-                    onUbicacionAplicada = ubicacionViewModel::consumir
+                    onUbicacionAplicada = ubicacionViewModel::consumir,
+                    onConsultarClima = ubicacionViewModel::consultarClima
                 ) { tipo, descripcion, ubicacion, fotoUri ->
                     viewModel.registrarAlerta(
                         usuario = usuario,
@@ -244,6 +276,30 @@ fun AlertasApp(
                         ubicacion = equipo
                     )
                     pantalla = "Alertas"
+                }
+
+                "Cuenta" -> CuentaScreen(
+                    usuario = usuario,
+                    mensaje = mensajeCuenta,
+                    procesando = procesandoCuenta,
+                    onGuardarPerfil = { nombre, direccion ->
+                        authViewModel.guardarPerfil(usuario.id, nombre, direccion)
+                    },
+                    onCambiarClave = authViewModel::cambiarClave,
+                    onLimpiarMensaje = authViewModel::limpiarMensaje,
+                    onVolver = {
+                        authViewModel.limpiarMensaje()
+                        pantalla = "Inicio"
+                    }
+                )
+
+                "Admin" -> if (Permisos.puedeAdministrarUsuarios(usuario.rol)) {
+                    AdminScreen(
+                        viewModel = adminViewModel,
+                        onVolver = { pantalla = "Inicio" }
+                    )
+                } else {
+                    Text("No tienes permiso para esta sección.", modifier = Modifier.padding(24.dp))
                 }
 
                 "Contactos" -> ContactosScreen(
@@ -307,6 +363,9 @@ private fun PantallaInicio(
     esAdmin: Boolean,
     activas: Int,
     total: Int,
+    rolTexto: String,
+    onMiCuenta: () -> Unit,
+    onAdministrar: (() -> Unit)?,
     onCerrarSesion: () -> Unit
 ) {
     var visible by remember { mutableStateOf(false) }
@@ -449,11 +508,31 @@ private fun PantallaInicio(
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        if (esAdmin) "Administrador" else "Vecino",
+                        rolTexto,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+        }
+
+        OutlinedButton(
+            onClick = onMiCuenta,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Edit, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Mi cuenta")
+        }
+
+        if (onAdministrar != null) {
+            Button(
+                onClick = onAdministrar,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Administrar vecinos")
             }
         }
 
