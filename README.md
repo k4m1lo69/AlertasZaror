@@ -4,7 +4,6 @@ App Android para la gestión de alarmas comunitarias de la Junta de Vecinos Pobl
 
 ## Integrantes
 - Camilo Andrés Contreras Silva
-- LET_DIR`, `DB_USER` y `DB_PASSWORD` definidas en la sesión: `.\mvnw.cmd spring-boot:run`
 
 ## Arquitectura
 - **App Android** (Kotlin, Jetpack Compose) con MVVM: `data` (Room, repositorios, Retrofit), `domain` (validaciones, roles y permisos), `viewmodel` y `ui`.
@@ -51,7 +50,8 @@ Android Studio reciente (Android Gradle Plugin 9.4.1 y Gradle 9.6.0), JDK 21, An
 ## Cómo ejecutar
 1. Clonar: `git clone https://github.com/k4m1lo69/AlertasZaror.git`
 2. **Base de datos**: ejecutar los scripts de `backend/db/` en orden numérico.
-3. **Backend** (PowerShell, desde la carpeta `backend`), con las variables `DB_ALIAS`, `DB_WAL4. **App**: abrir la raíz en Android Studio, esperar el Gradle Sync y ejecutar en un emulador. El emulador alcanza el backend local por `10.0.2.2`. Para un teléfono físico, la URL base en `RetrofitClient` debe apuntar a una dirección alcanzable desde el teléfono.
+3. **Backend** (PowerShell, desde la carpeta `backend`), con las variables `DB_ALIAS`, `DB_WALLET_DIR`, `DB_USER` y `DB_PASSWORD` definidas en la sesión: `.\mvnw.cmd spring-boot:run`
+4. **App**: abrir la raíz en Android Studio, esperar el Gradle Sync y ejecutar en un emulador. El emulador alcanza el backend local por `10.0.2.2`. Para un teléfono físico, la URL base en `RetrofitClient` debe apuntar a una dirección alcanzable desde el teléfono.
 
 ## Pruebas y cobertura
 - Backend: `cd backend` y luego `.\mvnw.cmd test`. Las pruebas de integración con Oracle se omiten si no hay variables de base de datos.
