@@ -4,7 +4,6 @@ App Android para la gestión de alarmas comunitarias de la Junta de Vecinos Pobl
 
 ## Integrantes
 - Camilo Andrés Contreras Silva
-- LET_DIR`, `DB_USER` y `DB_PASSWORD` definidas en la sesión: `.\mvnw.cmd spring-boot:run`
 
 ## Arquitectura
 - **App Android** (Kotlin, Jetpack Compose) con MVVM: `data` (Room, repositorios, Retrofit), `domain` (validaciones, roles y permisos), `viewmodel` y `ui`.
@@ -51,7 +50,9 @@ Android Studio reciente (Android Gradle Plugin 9.4.1 y Gradle 9.6.0), JDK 21, An
 ## Cómo ejecutar
 1. Clonar: `git clone https://github.com/k4m1lo69/AlertasZaror.git`
 2. **Base de datos**: ejecutar los scripts de `backend/db/` en orden numérico.
-3. **Backend** (PowerShell, desde la carpeta `backend`), con las variables `DB_ALIAS`, `DB_WAL4. **App**: abrir la raíz en Android Studio, esperar el Gradle Sync y ejecutar en un emulador. El emulador alcanza el backend local por `10.0.2.2`. Para un teléfono físico, la URL base en `RetrofitClient` debe apuntar a una dirección alcanzable desde el teléfono.
+3. **Backend** (PowerShell, desde la carpeta `backend`), con las variables `DB_ALIAS`, `DB_WALLET_DIR`, `DB_USER` y `DB_PASSWORD` definidas en la sesión: `.\mvnw.cmd spring-boot:run`
+   > Nota: en Windows, DB_WALLET_DIR debe usar barras normales (/), por ejemplo C:/Users/usuario/Downloads/Wallet_DuocUc2. Con \ el driver de Oracle falla con ORA-12261.
+4. **App**: abrir la raíz en Android Studio, esperar el Gradle Sync y ejecutar en un emulador. El emulador alcanza el backend local por `10.0.2.2`. Para un teléfono físico, la URL base en `RetrofitClient` debe apuntar a una dirección alcanzable desde el teléfono.
 
 ## Pruebas y cobertura
 - Backend: `cd backend` y luego `.\mvnw.cmd test`. Las pruebas de integración con Oracle se omiten si no hay variables de base de datos.
@@ -67,4 +68,4 @@ Android Studio reciente (Android Gradle Plugin 9.4.1 y Gradle 9.6.0), JDK 21, An
 Si Gradle indica que no encuentra el SDK, falta el archivo `local.properties`, que es específico de cada equipo y no se versiona. Android Studio lo crea al abrir el proyecto. Si no, créalo en la raíz con `sdk.dir=C\:\\Users\\USUARIO\\AppData\\Local\\Android\\Sdk`.
 
 ## Seguimiento del trabajo
-Planificación con tablero Trello o GitHub Projects, con responsables y estados, y control de versiones con ramas por funcionalidad.
+Planificación y seguimiento con GitHub (no se usó Trello): historial de commits, ramas por funcionalidad y Pull Requests, visibles en https://github.com/k4m1lo69/AlertasZaror/pulls y en la pestaña Commits.
