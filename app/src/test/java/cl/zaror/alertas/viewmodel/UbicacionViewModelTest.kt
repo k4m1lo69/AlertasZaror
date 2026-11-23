@@ -1,9 +1,12 @@
 
 package cl.zaror.alertas.viewmodel
 
+import cl.zaror.alertas.data.ClimaRepository
 import cl.zaror.alertas.data.Coordenadas
 import cl.zaror.alertas.data.FuenteUbicacion
 import cl.zaror.alertas.data.GeocodingRepository
+import cl.zaror.alertas.data.remote.ClimaApi
+import cl.zaror.alertas.data.remote.ClimaRespuesta
 import cl.zaror.alertas.data.remote.DireccionNominatim
 import cl.zaror.alertas.data.remote.GeocodingApi
 import cl.zaror.alertas.data.remote.GeocodingResponse
@@ -46,6 +49,25 @@ class UbicacionViewModelTest {
         }
     }
 
+    // API meteorológica falsa: evita conexiones reales durante los tests.
+    private class ApiClimaFalsa : ClimaApi {
+
+        override suspend fun consultarClima(
+            latitud: Double,
+            longitud: Double,
+            variables: String,
+            zonaHoraria: String,
+            unidadViento: String,
+            unidadTemperatura: String
+        ): ClimaRespuesta {
+            return ClimaRespuesta(
+                timezone = null,
+                abreviaturaZona = null,
+                current = null
+            )
+        }
+    }
+
     private fun crearViewModel(
         api: GeocodingApi,
         coordenadas: Coordenadas?
@@ -58,8 +80,9 @@ class UbicacionViewModelTest {
         }
 
         return UbicacionViewModel(
-            GeocodingRepository(api),
-            fuente
+            geocoding = GeocodingRepository(api),
+            clima = ClimaRepository(ApiClimaFalsa()),
+            fuente = fuente
         )
     }
 

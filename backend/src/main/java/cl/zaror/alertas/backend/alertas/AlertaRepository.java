@@ -102,6 +102,15 @@ public class AlertaRepository {
                 });
     }
 
+    /** Actualiza la URI de la fotografía asociada a una alerta. */
+    public void actualizarFotoUri(long id, String fotoUri) {
+        jdbc.update(
+                "UPDATE ALERTAS SET FOTO_URI = ? WHERE ID = ?",
+                ps -> {
+                    ps.setString(1, fotoUri);
+                    ps.setLong(2, id);
+                });
+    }
     public void eliminar(long id) {
         jdbc.update("DELETE FROM ALERTAS WHERE ID = ?", id);
     }

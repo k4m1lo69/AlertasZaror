@@ -5,7 +5,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
 
-    private const val BASE_URL = "http://192.168.112.81:8080/"
+    private const val BASE_URL = "http://192.168.0.13:8080/"
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
@@ -29,5 +29,14 @@ object RetrofitClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(GeocodingApi::class.java)
+    }
+
+    /** API meteorológica Open-Meteo: instancia independiente. */
+    val climaApi: ClimaApi by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://api.open-meteo.com/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ClimaApi::class.java)
     }
 }
